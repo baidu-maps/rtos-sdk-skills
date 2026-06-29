@@ -10,11 +10,11 @@
 
 | Skill | 说明 |
 | --- | --- |
-| [rtos-skills](./) | 百度地图 RTOS SDK（mapsdk-rtos）应用层集成开发助手 |
+| [baidu-map-rtos-skills](./) | 百度地图 RTOS SDK（mapsdk-rtos）应用层集成开发助手 |
 
 ---
 
-### rtos-skills
+### baidu-map-rtos-skills
 
 百度地图 RTOS SDK（mapsdk-rtos）应用层集成规范与代码生成。
 
@@ -79,18 +79,18 @@ cd rtos-sdk-skills
 - Skills 目录一般为：`~/.claude/skills/`
 - 注册（软链，推荐）：
   ```bash
-  ln -sfn "$(pwd)" ~/.claude/skills/rtos-skills
+  ln -sfn "$(pwd)" ~/.claude/skills/baidu-map-rtos-skills
   ```
-- 或直接把本仓库文件夹复制到 `~/.claude/skills/rtos-skills` 下。
+- 或直接把本仓库文件夹复制到 `~/.claude/skills/baidu-map-rtos-skills` 下。
 
 **Cursor**
 
 - Skills 目录一般为：`~/.cursor/skills-cursor/`
 - 注册（软链，推荐）：
   ```bash
-  ln -sfn "$(pwd)" ~/.cursor/skills-cursor/rtos-skills
+  ln -sfn "$(pwd)" ~/.cursor/skills-cursor/baidu-map-rtos-skills
   ```
-- 或直接把本仓库文件夹复制到 `~/.cursor/skills-cursor/rtos-skills` 下。
+- 或直接把本仓库文件夹复制到 `~/.cursor/skills-cursor/baidu-map-rtos-skills` 下。
 
 ### 4. 在对话中使用
 

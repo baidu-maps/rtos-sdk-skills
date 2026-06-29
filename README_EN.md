@@ -10,11 +10,11 @@ This repository includes the following Skill:
 
 | Skill | Description |
 | --- | --- |
-| [rtos-skills](./) | Baidu Map RTOS SDK (mapsdk-rtos) application-layer integration assistant |
+| [baidu-map-rtos-skills](./) | Baidu Map RTOS SDK (mapsdk-rtos) application-layer integration assistant |
 
 ---
 
-### rtos-skills
+### baidu-map-rtos-skills
 
 Application-layer integration guidelines and code generation for Baidu Map RTOS SDK (mapsdk-rtos).
 
@@ -79,18 +79,18 @@ Link or copy this repository folder to your environment’s skills directory so 
 - Skills directory is usually: `~/.claude/skills/`
 - Register (symlink, recommended):
   ```bash
-  ln -sfn "$(pwd)" ~/.claude/skills/rtos-skills
+  ln -sfn "$(pwd)" ~/.claude/skills/baidu-map-rtos-skills
   ```
-- Or copy this repository folder into `~/.claude/skills/rtos-skills`.
+- Or copy this repository folder into `~/.claude/skills/baidu-map-rtos-skills`.
 
 **Cursor**
 
 - Skills directory is usually: `~/.cursor/skills-cursor/`
 - Register (symlink, recommended):
   ```bash
-  ln -sfn "$(pwd)" ~/.cursor/skills-cursor/rtos-skills
+  ln -sfn "$(pwd)" ~/.cursor/skills-cursor/baidu-map-rtos-skills
   ```
-- Or copy this repository folder into `~/.cursor/skills-cursor/rtos-skills`.
+- Or copy this repository folder into `~/.cursor/skills-cursor/baidu-map-rtos-skills`.
 
 ### 4. Use in conversation
 

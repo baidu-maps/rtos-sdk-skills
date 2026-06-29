@@ -1,5 +1,5 @@
 ---
-name: rtos-skills
+name: baidu-map-rtos-skills
 description: 百度地图 RTOS SDK（mapsdk-rtos）应用层集成规范与代码生成。帮助应用开发者对接 mapsdk-rtos，开发类似 rtos-mac-simulator（mapAPP）的应用层，包含初始化鉴权、地图组件控制、覆盖物（Marker/Polyline）、检索路线、离线地图、导航、Canvas 适配层等能力。当用户提到：对接 RTOS 地图 SDK、集成 mapsdk-rtos、RTOS 地图初始化、MapComponentApi、AuthLicenseApi、SearchApi、NaviApi、MapOfflineApi、Canvas 适配、RTOS 覆盖物、RTOS 导航、RTOS 离线地图时，必须使用本 skill 确保生成正确可运行的代码。
 ---
 
