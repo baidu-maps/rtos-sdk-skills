@@ -4,9 +4,9 @@
 
 ## 检索（SearchApi）
 
-入口：`outputIncludes/search_api.h`，`SearchApi::GetInstance()`。  
+入口：`includes/search_api.h`，`SearchApi::GetInstance()`。  
 **坐标：** `baidu_search::Coordinate` 构造为 **(纬度, 经度)**，勿颠倒。  
-**线程：** 回调在 HTTP 线程触发；操作 `MapComponentApi` 须切回 UI 线程（mapAPP 用 `EnqueueMainThreadMapWork`）。
+**线程：** 回调在 HTTP 线程触发；操作 `MapViewApi` 须切回 UI 线程（mapAPP 用 `EnqueueMainThreadMapWork`）。
 
 | 场景 | 典型 API |
 |------|----------|
@@ -18,7 +18,7 @@
 
 ## 导航（NaviApi）
 
-入口：`outputIncludes/navi_api.h`。路线瓦片预加载用 `MapComponentApi::LoadRouteMapData`，不再通过 NaviApi。
+入口：`includes/navi_api.h`。路线瓦片预加载用 `MapViewApi::LoadRouteMapData(h, ...)`，不再通过 NaviApi。
 
 ```cpp
 NaviApi* navi = NaviApi::GetInstance();
@@ -45,7 +45,7 @@ navi->ExitNavi();
 
 ## 离线地图（MapOfflineApi）
 
-入口：`outputIncludes/offline/map_offline_api.h`。
+入口：`includes/offline/map_offline_api.h`。
 
 ```cpp
 MapOfflineApi* api = MapOfflineApi::GetInstance();
@@ -68,9 +68,16 @@ api->GetOfflineCityInfo({"北京", "上海"}, cityRecords);
 // 返回 0 表示已提交；OfflinePackageNeedDelete 须先 DeleteDownloadedCityPackageFile 再重试
 int code = api->StartDownloadByCityName("北京");
 
-// success=false 表示未命中或定位失败
-api->GetOfflineCityInfoByCurrentLocation([](bool success, const OfflineCityInfo& info) { });
 ```
+
+### 接口说明
+
+- **`RequestVersion()`**：返回 `int`（`MapOfflineGetVersionCode`）；异步结果通过 `RegisterRequestVersionCallback` 回调。
+- **`GetDownloadableCityList` / `GetDownloadedCityList`**：填充 `std::vector<OfflineCityInfo>`。
+- **`GetOfflineCityInfo(cityNameVec, cityRecords)`**：按名批量查询；**已下载优先**；**先清空 `cityRecords`**；匹配不到的城市跳过；须先 `RequestVersion`。
+- **`StartDownloadByCityName(cityName)`**：返回 `int`（`MapOfflineStartDownloadCode`）；`0` 表示已提交；常见非 0：`InvalidCityId`、`OfflinePackageNeedDelete`（须先 `DeleteDownloadedCityPackageFile` 再重试）、`CityPkgDownloading`、`NoDownloadableCityList`（先 `RequestVersion`）。
+- **`DeleteDownloadedCityPackageFile(cityName)`**：返回 `MapOfflineRemoveFileStatus` 对应整型。
+- **离线包路径**：由 SDK 内部管理，应用层无需指定；无网络时已下载的离线包仍可正常使用，仅无法下载新包。
 
 ---
 
@@ -93,9 +100,9 @@ main (SDL Confirm)
 | 1 | 参考 [demo.md](demo.md) 确认 SDK API 与回调线程 |
 | 2 | 地图类逻辑放 `map_runtime.cpp`；独立面板仿 `*_runtime.cpp` + `src/demo/*_page.cpp` |
 | 3 | 同步注册 `DemoId`、`RunMapDemoById`、`main` 右侧列表 |
-| 4 | 网络/搜索回调里操作 `MapComponentApi` 须用 `EnqueueMainThreadMapWork` |
+| 4 | 网络/搜索回调里操作 `MapViewApi` 须用 `EnqueueMainThreadMapWork` 切回渲染线程 |
 | 5 | 需干净地图用 `EnsureMapReinitialized()`；默认底图勿对刚 Init 的实例重入销毁 |
-| 6 | 资源路径：Windows（含 MSYS）`<exe>/app/bd_map/`；macOS `includes/v_config.h` 的 `ROOT_DIR` |
+| 6 | 资源路径：需传入 SDK 可读的文件路径；Demo 中示例使用 `getAppCachePath()` 仅供参考，实际可使用任意 SDK 有读权限的路径，`getAppCachePath` 是 SDK 内部接口，应用层不应依赖它 |
 
 ### 内置 Demo 入口速查
 

@@ -2,24 +2,12 @@
 
 [中文](README.md)
 
-This repository provides an AI Coding Agent Skill for **Baidu Map RTOS SDK (mapsdk-rtos)**, helping developers efficiently integrate RTOS map applications, implement Canvas adapters, control map components, draw overlays, use search and route planning, manage offline maps, and build navigation features within intelligent coding tools (e.g. Cursor, Claude Code).
+This repository provides an AI Coding Agent Skill `baidu-map-rtos-skills` for **Baidu Map RTOS SDK (mapsdk-rtos)**, helping developers efficiently integrate RTOS map applications, implement Canvas adapters, control map components, draw overlays, use search and route planning, manage offline maps, and build navigation features within intelligent coding tools (e.g. Cursor, Claude Code).
 
-## Skills Overview
-
-This repository includes the following Skill:
-
-| Skill | Description |
-| --- | --- |
-| [baidu-map-rtos-skills](./) | Baidu Map RTOS SDK (mapsdk-rtos) application-layer integration assistant |
-
----
-
-### baidu-map-rtos-skills
-
-Application-layer integration guidelines and code generation for Baidu Map RTOS SDK (mapsdk-rtos).
+## Skill Capabilities
 
 - **Initialization and authentication** — License authentication, base configuration, package name/cache path/version info, initialization order, and integration checklist
-- **Map component control** — `MapComponentApi` setup, lifecycle, map state control, render requests, and touch events
+- **Map component control** — `MapViewApi` setup, lifecycle, map state control, render requests, and touch events (static methods + `MapViewHandle`, multi-instance support)
 - **Canvas adapter layer** — C function stubs, C++ adapter classes, `MapCanvasImpl` binding, drawing/text/clipping/transform implementation notes
 - **Overlay drawing** — Markers, polylines, point lists / GeoJSON, style setup, visibility control, and layer updates
 - **Search and route planning** — POI search, reverse geocoding, walking/driving route planning, and route tile preloading
@@ -27,15 +15,15 @@ Application-layer integration guidelines and code generation for Baidu Map RTOS 
 - **Navigation** — `NaviApi` setup, route result integration, navigation startup, and state callbacks
 - **Demo extension** — Add application-layer demos in the rtos-mac-simulator (mapAPP) project
 
-This Skill applies to RTOS map application development that integrates public `*_api.h` headers under `outputIncludes/`.
+This Skill applies to RTOS map application development that integrates public `*_api.h` headers under `includes/`.
 
 ## Requirements
 
 - **Platform**: RTOS / macOS simulator (rtos-mac-simulator / mapAPP)
 - **Language**: C / C++
 - **SDK**: mapsdk-rtos
-- **Core APIs**: `MapComponentApi`, `AuthLicenseApi`, `SearchApi`, `NaviApi`, `MapOfflineApi`
-- **Integration**: Public headers under `outputIncludes/` plus platform Adapter / Canvas implementations
+- **Core APIs**: `MapViewApi`, `AuthLicenseApi`, `SearchApi`, `NaviApi`, `MapOfflineApi`
+- **Integration**: Public headers under `includes/` plus platform Adapter / Canvas implementations
 
 ## Directory structure
 
@@ -94,7 +82,7 @@ Link or copy this repository folder to your environment’s skills directory so 
 
 ### 4. Use in conversation
 
-In a client that supports Skills, when your question involves keywords like “RTOS map SDK”, “mapsdk-rtos”, “MapComponentApi”, “AuthLicenseApi”, “SearchApi”, “NaviApi”, “MapOfflineApi”, “Canvas adapter”, “RTOS overlays”, “RTOS navigation”, or “RTOS offline maps”, the assistant will prefer this repository’s docs and give answers and code aligned with Baidu Map RTOS SDK.
+In a client that supports Skills, when your question involves keywords like “RTOS map SDK”, “mapsdk-rtos”, “MapViewApi”, “AuthLicenseApi”, “SearchApi”, “NaviApi”, “MapOfflineApi”, “Canvas adapter”, “RTOS overlays”, “RTOS navigation”, “RTOS offline maps”, or “multi-instance map”, the assistant will prefer this repository’s docs and give answers and code aligned with Baidu Map RTOS SDK.
 
 ## References
 

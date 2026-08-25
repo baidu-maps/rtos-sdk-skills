@@ -1,6 +1,6 @@
 ---
-name: baidu-map-rtos-skills
-description: 百度地图 RTOS SDK（mapsdk-rtos）应用层集成规范与代码生成。帮助应用开发者对接 mapsdk-rtos，开发类似 rtos-mac-simulator（mapAPP）的应用层，包含初始化鉴权、地图组件控制、覆盖物（Marker/Polyline）、检索路线、离线地图、导航、Canvas 适配层等能力。当用户提到：对接 RTOS 地图 SDK、集成 mapsdk-rtos、RTOS 地图初始化、MapComponentApi、AuthLicenseApi、SearchApi、NaviApi、MapOfflineApi、Canvas 适配、RTOS 覆盖物、RTOS 导航、RTOS 离线地图时，必须使用本 skill 确保生成正确可运行的代码。
+name: rtos-skills
+description: 百度地图 RTOS SDK（mapsdk-rtos）应用层集成规范与代码生成。帮助应用开发者对接 mapsdk-rtos，开发类似 rtos-mac-simulator（mapAPP）的应用层，包含初始化鉴权、地图组件控制（含多实例）、覆盖物（Marker/Polyline）、检索路线、离线地图、导航、Canvas 适配层等能力。当用户提到：对接 RTOS 地图 SDK、集成 mapsdk-rtos、RTOS 地图初始化、MapViewApi、MapComponentApi、AuthLicenseApi、SearchApi、NaviApi、MapOfflineApi、Canvas 适配、RTOS 覆盖物、RTOS 导航、RTOS 离线地图、多实例地图时，必须使用本 skill 确保生成正确可运行的代码。
 ---
 
 # mapsdk-rtos 应用层集成规范
@@ -15,17 +15,17 @@ description: 百度地图 RTOS SDK（mapsdk-rtos）应用层集成规范与代�
 
 满足其一即启用：
 
-- 集成 `outputIncludes/` 下的 `*_api.h` 头文件
-- 调用 `MapComponentApi` / `AuthLicenseApi` / `SearchApi` / `NaviApi` / `MapOfflineApi`
+- 集成 `includes/` 下的 `*_api.h` 头文件
+- 调用 `MapViewApi` / `AuthLicenseApi` / `SearchApi` / `NaviApi` / `MapOfflineApi`
 - 实现或调试 Canvas 适配层（`drawImage`、`measureText`、`stroke` 等）
 - 在 rtos-mac-simulator（mapAPP）工程中扩展新 Demo
 - 排查地图不渲染、覆盖物不可见、鉴权失败、离线列表为空等问题
 
-## 对外头文件（`outputIncludes/`）
+## 对外头文件（`includes/`）
 
 | 头文件 | 职责 |
 |--------|------|
-| `map_component_api.h` | 地图组件（`MapComponentApi`） |
+| `map_view_api.h` | 地图组件（`MapViewApi`，静态方法，按 `MapViewHandle` 支持多实例） |
 | `auth_license_api.h` | 鉴权与 License（`AuthLicenseApi`） |
 | `base_api.h` | 基础能力（包名、缓存路径、版本） |
 | `search_api.h` | 检索聚合入口（POI、路线、逆地理） |
@@ -49,9 +49,9 @@ description: 百度地图 RTOS SDK（mapsdk-rtos）应用层集成规范与代�
 | 现象 | 首先检查 |
 |------|----------|
 | 折线 / Marker 有数据不可见 | 显式设置线宽与颜色；确认已 `showOverlay` + `updateLayer` + `RequestRender` |
-| 地图白屏 / 不渲染 | 确认 `Authenticate` 成功、`MarkComponentAlive(true)`、`SetCanvas`、`InitMap` 顺序 |
+| 地图白屏 / 不渲染 | 确认 `Authenticate` 成功、`MapViewApi::Create`、`SetCanvas`、`InitMap` 顺序 |
 | 步行 / POI 无结果 | 检查鉴权 token、网络层实现、坐标顺序（纬度, 经度） |
-| 离线列表为空 | 先 `RequestVersion`，确认 callback 成功后再 `GetDownloadableCityList` |
+| 离线列表为空 | 先 `RequestVersion`，确认 callback 成功后再 `GetDownloadableCityList`；离线包路径由 SDK 内部管理，无需应用指定 |
 | 路线瓦片 progress=-1 | 瓦片数量超限 |
 | 实机与模拟器绘制不一致 | 查 Canvas 后端 stroke/clip/transform，不要先怀疑 GeoJSON 数据丢点 |
 | MSVC LNK2038 | SDK 与 mapAPP 须同为 Debug 或 Release |

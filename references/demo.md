@@ -1,6 +1,6 @@
 # 完整 Demo 示例
 
-所有示例均源自 SDK 全流程示例，可直接对照集成。头文件路径以实际工程 `outputIncludes/` 为准。
+所有示例均源自 SDK 全流程示例，可直接对照集成。头文件路径以实际工程 `includes/` 为准。
 
 ---
 
@@ -21,24 +21,23 @@ int main() {
     authApi->RequestLicense([](license::LicenseErrorCode code) { /* ... */ });
     authApi->Authenticate([](MapAuthErrorCode code) { /* ... */ });
 
-    MapComponentApi& mapApi = MapComponentApi::GetInstance();
-    mapApi.MarkComponentAlive(true);
+    MapViewHandle h = MapViewApi::Create();
 
     auto baiduMapCanvas = std::make_shared<MapCanvasImpl>();
     // 传入平台真实 canvas/context，例如 OHOS 先创建 UICanvasExt 再 setCanvas
     baiduMapCanvas->setCanvas(platformCanvasContext);
-    mapApi.SetCanvas(baiduMapCanvas);
+    MapViewApi::SetCanvas(h, baiduMapCanvas);
 
     // SDK 内部渲染数据更新时触发此回调，在此调用 RequestRender 拉取新数据
-    mapApi.SetUIThreadFunc([]() {
-        MapComponentApi::GetInstance().RequestRender();
+    MapViewApi::SetUIThreadFunc(h, [h]() {
+        MapViewApi::RequestRender(h);
     });
-    mapApi.InitMap();
-    mapApi.RequestRender();
+    MapViewApi::InitMap(h);
+    MapViewApi::RequestRender(h);
 
     // ... 业务 Demo ...
 
-    mapApi.MarkComponentAlive(false);
+    MapViewApi::Destroy(h);
     return 0;
 }
 ```
@@ -48,57 +47,59 @@ int main() {
 ## RunMapStateAndOverlayDemo：地图状态、Marker、折线
 
 ```cpp
-static void RunMapStateAndOverlayDemo(MapComponentApi& mapApi) {
-    mapApi.setCenterPoint(VDPOINT(116.404, 39.915));
-    mapApi.setZoom(15.0f);
-    mapApi.zoomIn();
-    mapApi.zoomOut();
-    mapApi.setRotationAngle(30.0);
-    mapApi.SetMapBackgroundColor(VColor(18, 18, 24, 255));
-    mapApi.setViewBound(utils::geo::VRect(0, 0, 800, 480));
+static void RunMapStateAndOverlayDemo(MapViewHandle h) {
+    MapViewApi::setCenterPoint(h, VDPOINT(116.404, 39.915));
+    MapViewApi::setZoom(h, 15.0f);
+    MapViewApi::zoomIn(h);
+    MapViewApi::zoomOut(h);
+    MapViewApi::setRotationAngle(h, 30.0);
+    MapViewApi::SetMapBackgroundColor(h, VColor(18, 18, 24, 255));
+    MapViewApi::setViewBound(h, utils::geo::VRect(0, 0, 800, 480));
 
-    const VDPOINT pixel  = mapApi.LatLngToScreenPixel(VDPOINT(116.404, 39.915));
-    const VDPOINT restore = mapApi.ScreenPixelToLatLng(pixel);
+    const VDPOINT pixel  = MapViewApi::LatLngToScreenPixel(h, VDPOINT(116.404, 39.915));
+    const VDPOINT restore = MapViewApi::ScreenPixelToLatLng(h, pixel);
 
-    const int layerId   = mapApi.createLayer(LayerType::OVERLAYER, "demo_overlay_layer");
+    const int layerId   = MapViewApi::createLayer(h, LayerType::OVERLAYER, "demo_overlay_layer");
 
     // Marker
-    const int markerId = mapApi.CreateMarker();
-    mapApi.setMarkerPosition(markerId, VDPOINT(116.404, 39.915));
-    mapApi.setMarkerSize(markerId, utils::geo::VSize(36, 36));
-    mapApi.setMarkerOffset(markerId, utils::geo::VSize(18, 36));
-    mapApi.setMarkerAngle(markerId, 0.0);
-    mapApi.addOverlay(layerId, markerId);
-    mapApi.showOverlay(markerId);
+    const int markerId = MapViewApi::CreateMarker(h);
+    MapViewApi::setMarkerPosition(h, markerId, VDPOINT(116.404, 39.915));
+    MapViewApi::setMarkerSize(h, markerId, utils::geo::VSize(36, 36));
+    MapViewApi::setMarkerOffset(h, markerId, utils::geo::VSize(18, 36));
+    MapViewApi::setMarkerAngle(h, markerId, 0.0);
+    MapViewApi::addOverlay(h, layerId, markerId);
+    MapViewApi::showOverlay(h, markerId);
 
     // 折线（点集）
-    const int polylineId = mapApi.CreatePolyline();
+    const int polylineId = MapViewApi::CreatePolyline(h);
     std::vector<VDPOINT> routePoints = {
         VDPOINT(116.400, 39.910),
         VDPOINT(116.404, 39.915),
         VDPOINT(116.410, 39.920)
     };
-    mapApi.setPolylinePoints(polylineId, routePoints);
-    mapApi.setPolylineFillColor(polylineId, VColor(0, 153, 255, 220));
-    mapApi.setPolylineStrokeColor(polylineId, VColor(255, 255, 255, 255));
-    mapApi.setPolylineLineWidth(polylineId, 8);
-    mapApi.setPolylineStrokeWidth(polylineId, 2);
-    mapApi.addOverlay(layerId, polylineId);
-    mapApi.showOverlay(polylineId);
-    mapApi.updateLayer(layerId);
+    MapViewApi::setPolylinePoints(h, polylineId, routePoints);
+    MapViewApi::setPolylineFillColor(h, polylineId, VColor(0, 153, 255, 220));
+    MapViewApi::setPolylineStrokeColor(h, polylineId, VColor(255, 255, 255, 255));
+    MapViewApi::setPolylineLineWidth(h, polylineId, 8);
+    MapViewApi::setPolylineStrokeWidth(h, polylineId, 2);
+    MapViewApi::addOverlay(h, layerId, polylineId);
+    MapViewApi::showOverlay(h, polylineId);
+    MapViewApi::updateLayer(h, layerId);
 
-    const utils::geo::VRect bounds = mapApi.getOverlayBounds(polylineId);
-    mapApi.setViewBound(bounds);
-    mapApi.RequestRender();
+    const utils::geo::VRect bounds = MapViewApi::getOverlayBounds(h, polylineId);
+    MapViewApi::setViewBound(h, bounds);
+    MapViewApi::RequestRender(h);
 }
 ```
+
+> Marker 图标（`setMarkerVImage`）依赖 `VImage::SetImageProvider` 注册的 Provider；honor/oppo/huawei/xiaoniu 已内置默认实现，simulator 等平台需应用侧自行注册（见 [overlay-map-control.md § 图片适配](overlay-map-control.md)）。
 
 ---
 
 ## RunTouchDemo：触摸事件
 
 ```cpp
-static void RunTouchDemo(MapComponentApi& mapApi) {
+static void RunTouchDemo(MapViewHandle h) {
     auto makeEvent = [](TouchEvent::Type type, float x, float y) {
         TouchEvent e;
         e.type = type;
@@ -110,9 +111,9 @@ static void RunTouchDemo(MapComponentApi& mapApi) {
         return e;
     };
 
-    mapApi.OnTouchDown(makeEvent(TouchEvent::Type::TOUCH_START, 100, 100));
-    mapApi.OnTouchMove(makeEvent(TouchEvent::Type::TOUCH_MOVE, 180, 160));
-    mapApi.OnTouchUp(makeEvent(TouchEvent::Type::TOUCH_END,  220, 180));
+    MapViewApi::OnTouchDown(h, makeEvent(TouchEvent::Type::TOUCH_START, 100, 100));
+    MapViewApi::OnTouchMove(h, makeEvent(TouchEvent::Type::TOUCH_MOVE, 180, 160));
+    MapViewApi::OnTouchUp(h, makeEvent(TouchEvent::Type::TOUCH_END,  220, 180));
 }
 ```
 
@@ -144,7 +145,7 @@ static void RunSearchAndRoutePlanDemo() {
     walkOption.to.cityName   = "北京";
     searchApi.RouteWalkingSearch(walkOption,
         [](void*, WalkingSearchResult* result, SEARCH_ERROR_CODE code, const std::string&) {
-            // 回调在 HTTP 线程，操作 MapComponentApi 须切回 UI 线程
+            // 回调在 HTTP 线程，操作 MapViewApi 须切回 UI 线程
         });
 }
 ```
@@ -178,10 +179,6 @@ static void RunOfflineDemo() {
     const std::string city = downloadable.empty() ? "北京" : downloadable.front().name;
     int code = api->StartDownloadByCityName(city);
     // code == OfflinePackageNeedDelete：先 DeleteDownloadedCityPackageFile 再重试
-
-    api->GetOfflineCityInfoByCurrentLocation([](bool success, const OfflineCityInfo& info) {
-        // success=false 表示未命中或定位失败
-    });
 }
 ```
 
@@ -190,15 +187,15 @@ static void RunOfflineDemo() {
 ## RunRouteTileDemo：路线瓦片预加载
 
 ```cpp
-static void RunRouteTileDemo(MapComponentApi& mapApi) {
+static void RunRouteTileDemo(MapViewHandle h) {
     const std::string routeFile = "route.json";   // 文件名，非完整路径
 
-    mapApi.LoadRouteMapData(routeFile, [](const TilePreloadResponse& resp) {
+    MapViewApi::LoadRouteMapData(h, routeFile, [](const TilePreloadResponse& resp) {
         // resp.progressPercent == -1 表示瓦片数量超限
     });
 
-    mapApi.CancelMapDataDownload();
-    mapApi.DeleteRouteMapData(routeFile);
+    MapViewApi::CancelMapDataDownload(h);
+    MapViewApi::DeleteRouteMapData(h, routeFile);
 }
 ```
 
@@ -235,3 +232,26 @@ static void RunNaviDemo() {
     navi->ExitNavi();
 }
 ```
+
+---
+
+## 多实例地图示例
+
+```cpp
+MapViewHandle h1 = MapViewApi::Create();
+MapViewHandle h2 = MapViewApi::Create();
+auto canvas1 = std::make_shared<MapCanvasImpl>(); canvas1->setCanvas(ctx1);
+auto canvas2 = std::make_shared<MapCanvasImpl>(); canvas2->setCanvas(ctx2);
+MapViewApi::SetCanvas(h1, canvas1);
+MapViewApi::SetCanvas(h2, canvas2);
+MapViewApi::InitMap(h1);
+MapViewApi::InitMap(h2);
+MapViewApi::setCenterPoint(h1, {116.4074, 39.9042}); // 北京
+MapViewApi::setCenterPoint(h2, {121.4737, 31.2304}); // 上海
+MapViewApi::RequestRender(h1);
+MapViewApi::RequestRender(h2);
+MapViewApi::Destroy(h1);
+MapViewApi::Destroy(h2);
+```
+
+两个实例各自独立生命周期，互不共享地图状态（`renderDataCache_`、图层、覆盖物等），仅进程级全局状态（如 `VImage::SetImageProvider`）共享。
