@@ -1,129 +1,72 @@
-# 地图状态、覆盖物与触摸
+# 地图状态、覆盖物与图片适配
 
-完整可运行示例见 [demo.md § RunMapStateAndOverlayDemo](demo.md) 和 [demo.md § RunTouchDemo](demo.md)。
+完整可运行代码见 [demo.md](demo.md)（`RunMapStateAndOverlayDemo` / `RunTouchDemo` / `RunRouteTileDemo` / 多实例示例）。
 
 ## 地图状态与坐标
 
-```cpp
-MapViewApi::setCenterPoint(h, VDPOINT(lng, lat));  // VDPOINT 为经度/纬度顺序
-MapViewApi::setZoom(h, level);
-MapViewApi::zoomIn(h); MapViewApi::zoomOut(h);
-MapViewApi::setRotationAngle(h, degrees);
-MapViewApi::setViewBound(h, rect);
-MapViewApi::LatLngToScreenPixel(h, center);
-MapViewApi::ScreenPixelToLatLng(h, pixel);
-```
+| 项 | 规则 |
+|----|------|
+| 坐标系 | 传入 SDK 的经纬度一律按 **GCJ02** 处理；WGS84 必须先转换，见 [SKILL.md § 输入坐标系](../SKILL.md)。不转不报错，整体偏几百米 |
+| 坐标序 | 地图侧 `VDPOINT(经度, 纬度)`，检索侧 `Coordinate(纬度, 经度)`，勿混 |
+| 角度单位 | `setRotationAngle(h, angle)`、`setMarkerAngle(h, id, angle)` 都是**弧度**。30° 写 `30.0 * M_PI / 180.0` |
+| 按覆盖物全览 | `setViewBound(h, getOverlayBounds(h, overlayId))`；地图有旋转时先 `setRotationAngle(h, 0)` 复位 |
+| 像素↔经纬度 | `LatLngToScreenPixel` / `ScreenPixelToLatLng`，经纬度侧同为 GCJ02 |
+| `SetMapStyle` | 必须在 `InitMap` 之后；切换的是**全局主题**（见"多实例地图"）。返回 `false` = `themeId` 越界，或当前 `.a` 不支持主题切换 |
 
 ## 触摸事件
 
-构造 `TouchEvent`（类型：`TOUCH_START` / `TOUCH_MOVE` / `TOUCH_END`），填充 `touches` / `changedTouches` 后：
+`TouchEvent` 需填 `type`（`TouchEvent::Type::TOUCH_START` / `TOUCH_MOVE` / `TOUCH_END`）、`touches`、`changedTouches`，按 `OnTouchDown` → `OnTouchMove` → `OnTouchUp` 投递。构造写法见 [demo.md § RunTouchDemo](demo.md)。
+
+| 入口 | 取值要求 |
+|------|------|
+| `OnTouchDown` | 取 `touches[0]` |
+| `OnTouchMove` | 取 `touches[1]`：**`touches` 至少放 2 个元素**，只放 1 个会越界读内存（可把同一个 touch push 两次） |
+| `OnTouchUp`、图层事件 | 优先 `changedTouches[0]`，为空回落 `touches[0]`；两个数组都空则事件被跳过 |
+
+## 覆盖物与图片适配
+
+顺序：`createLayer` → `CreateMarker` / `CreatePolyline` → 设属性 → `addOverlay(h, layerId, overlayId)` → `updateLayer(h, layerId)` → 渲染一次（已 `SetUIThreadFunc` 时 `updateLayer` 末尾会自动发出刷新通知，未注册回调才需自己调 `RequestRender`）。
+
+| 必须 | 禁止 |
+|------|------|
+| 设完属性调 `updateLayer`，并确保渲染发生一次 | 靠 `showOverlay` 让覆盖物可见（它只用于撤销 `hideOverlay`，不是必需项） |
+| 折线显式设 `setPolylineLineWidth` | 不设线宽（行为未定义：可能不画，可能任意粗细） |
+| 折线一起设 `setPolylineFillColor`（`setPolylineStrokeColor` / `setPolylineStrokeWidth` 为可选描边） | 不设填充色（默认不透明黑 (0,0,0,255)，深色底图上看不见） |
+| `updateLayer` / `addOverlay` 只传 `createLayer` 返回的 layerId | 传未创建的 layerId（直接崩） |
+| `addOverlay` 的目标图层类型必须是 `LayerType::OVERLAYER` | 往其它类型图层加覆盖物（静默失败，无日志无返回值） |
+
+**Marker 图标两种设法**，都依赖已注册的图片 Provider：`setMarkerIcon(h, markerId, resPath)` 传 SDK 可读的绝对路径；`setMarkerVImage(h, markerId, image)` 传内存位图，免文件 I/O。日志 `drawMarker: pixel=(0.000000, 0.000000)` 是 marker 与地图中心重合时的正常输出，不是错误。
+
+**折线点集也可来自 GeoJSON 文件**：`setPolylinePointsURI(h, polylineId, "/abs/path/routes.geojson")`，之后照常设线宽与颜色 → `addOverlay` → `updateLayer` → 渲染一次。该路径直接交平台文件实现打开，**不经过 `GetAppCachePath()`**：给绝对路径，相对路径按进程 CWD 解析；文件读不到或不是合法 GeoJSON `FeatureCollection` 时点集保持为空，无报错无返回值，表现为"折线加了但什么都没画"。
+
+**图片 Provider** 必须在 `InitMap` 之前注册一次，进程级全局；实现要求见 [adapter-build.md § 6](adapter-build.md)。`CreateImageFromPath` / `CreateImageFromData` 返回的对象由 Canvas 侧 `drawImage` 消费，两边必须约定同一具体类型。
 
 ```cpp
-MapViewApi::OnTouchDown(h, event);
-MapViewApi::OnTouchMove(h, event);
-MapViewApi::OnTouchUp(h, event);
-```
-
-## Overlay 层与 Marker
-
-```cpp
-int layerId  = MapViewApi::createLayer(h, LayerType::OVERLAYER, "layer_name");
-int markerId = MapViewApi::CreateMarker(h);
-MapViewApi::setMarkerPosition(h, markerId, VDPOINT(lng, lat));
-MapViewApi::setMarkerSize(h, markerId, VSize(w, h));
-MapViewApi::setMarkerOffset(h, markerId, VSize(ox, oy));
-MapViewApi::setMarkerIcon(h, markerId, resPath);   // 须为可访问绝对路径
-MapViewApi::addOverlay(h, layerId, markerId);
-MapViewApi::showOverlay(h, markerId);
-MapViewApi::updateLayer(h, layerId);
-MapViewApi::RequestRender(h);
-```
-
-> `drawMarker: pixel=(0,0)` 日志是 marker 与地图中心重合的正常现象。
-
-## 图片适配（VImage / ImageProviderCommonInterface）
-
-`VImage`（`src/base/v_image.h`）用于 marker 图标（`setMarkerVImage`）和瓦片图层的图片加载。图片的实际解码/创建逻辑由 `ImageProviderCommonInterface`（`src/adapter/common/image/ImageProviderCommonInterface.h`）实现类提供：
-
-内置四个平台（honor/oppo/huawei/xiaoniu）已由 SDK 在 `LayerMgr` 构造时按平台宏自动注册默认实现，应用侧无需额外调用；simulator 及未内置的新平台需应用侧实现 `ImageProviderCommonInterface`，在地图初始化（`MapViewApi::InitMap` 之前）调用一次：
-
-```cpp
-#include "v_image.h"
-
-class MyImageProvider : public baidu::rtos_map::image::ImageProviderCommonInterface {
-public:
-    std::shared_ptr<void> CreateImageFromPath(const std::string& path, int width, int height) override {
-        // 实现平台图片解码逻辑，返回类型抹平后的 shared_ptr<void>
-    }
-    std::shared_ptr<void> CreateImageFromData(const char* data, unsigned int dataSize, int width, int height) override {
-        // 实现平台图片解码逻辑
-    }
-};
-
-baidu::rtos_map::image::VImage::SetImageProvider(std::make_shared<MyImageProvider>());
-```
-
-注意：`VImage::SetImageProvider` 是进程级全局设置，只需调用一次；返回的 `shared_ptr<void>` 最终会被 Canvas 侧 `drawImage` 实现 `static_cast` 回具体类型消费，需与对应平台 `CanvasContextCommonInterface` 实现约定好类型。
-
-```cpp
-auto markerImage = std::make_shared<baidu::rtos_map::image::VImage>("marker_icon.png", 36, 36);
+#include "base/v_image.h"
+using namespace baidu::rtos_map::image;
+VImage::SetImageProvider(std::make_shared<MyImageProvider>());   // 只需一次
+auto markerImage = std::make_shared<VImage>("marker_icon.png", 36, 36);
 MapViewApi::setMarkerVImage(h, markerId, markerImage);
 ```
 
-## 折线（点集）
-
-```cpp
-int polylineId = MapViewApi::CreatePolyline(h);
-MapViewApi::setPolylinePoints(h, polylineId, points);
-MapViewApi::setPolylineLineWidth(h, polylineId, 8);
-MapViewApi::setPolylineFillColor(h, polylineId, VColor(0, 153, 255, 220));
-MapViewApi::setPolylineStrokeColor(h, polylineId, color);   // 可选
-MapViewApi::setPolylineStrokeWidth(h, polylineId, 2);        // 可选
-MapViewApi::addOverlay(h, layerId, polylineId);
-MapViewApi::showOverlay(h, polylineId);
-MapViewApi::updateLayer(h, layerId);
-MapViewApi::setViewBound(h, MapViewApi::getOverlayBounds(h, polylineId));
-MapViewApi::RequestRender(h);
-```
-
-## 折线（GeoJSON 文件）
-
-```cpp
-MapViewApi::setPolylinePointsURI(h, polylineId, "/abs/path/to/routes.geojson");
-MapViewApi::setPolylineLineWidth(h, polylineId, 12);
-MapViewApi::setPolylineFillColor(h, polylineId, VColor::fromHex("#09cfed"));
-// addOverlay → showOverlay → updateLayer → setRotationAngle(h, 0) → setViewBound → RequestRender
-```
-
-**必须显式设置线宽与颜色；勿依赖默认样式。**
-
 ## 路线瓦片预加载
 
-```cpp
-MapViewApi::LoadRouteMapData(h, routeFileName, [](const TilePreloadResponse& resp) {
-    // resp.progressPercent == -1 表示瓦片数量超限
-});
-MapViewApi::CancelMapDataDownload(h);
-MapViewApi::DeleteRouteMapData(h, routeFileName);  // routeFileName 为文件名，非完整路径
-```
+`LoadRouteMapData` / `DeleteRouteMapData` 的 `routeFile` 传**文件名**，不是完整路径；取消用 `CancelMapDataDownload`。代码见 [demo.md § RunRouteTileDemo](demo.md)。
+
+- geojson 源文件（`routeFile` 本身）交平台文件实现打开，**不经过 `GetAppCachePath()`**，相对路径按进程 CWD 解析；瓦片账本文件 `route/<routeFile>_tile.data` **相对 `GetAppCachePath()`** 解析。让两者落在同一目录：调用前把 CWD 切到 `GetAppCachePath() + "/route"`，结束后切回。
+
+| 回调结果 | 含义 |
+|------|------|
+| `progressPercent == -1`（`isCompleted` 同为 `true`） | 范围内瓦片超过 5000 张，放弃预加载；`totalCount` 为实际张数 |
+| 一次都不触发 | 瓦片范围无效或算出 0 张（geojson 没读到 / 解析失败 / 点集为空）。不是"还在下载中" |
+| 一次即完成，`totalCount=0`、`progressPercent=100`、瓦片列表为空 | 账本文件已存在，跳过下载；要重下先 `DeleteRouteMapData` |
 
 ## 多实例地图
 
-多个独立地图实例互不共享地图状态，各自 `Create`/`SetCanvas`/`InitMap`/`Destroy`：
+各实例独立 `Create` / `SetCanvas` / `InitMap` / `Destroy`，**地图状态**（中心点、缩放、旋转、图层、覆盖物）互不影响。以下为**进程级共享**：
 
-```cpp
-MapViewHandle h1 = MapViewApi::Create();
-MapViewHandle h2 = MapViewApi::Create();
-MapViewApi::SetCanvas(h1, canvas1);
-MapViewApi::SetCanvas(h2, canvas2);
-MapViewApi::InitMap(h1);
-MapViewApi::InitMap(h2);
-MapViewApi::setCenterPoint(h1, {116.4074, 39.9042}); // 北京
-MapViewApi::setCenterPoint(h2, {121.4737, 31.2304}); // 上海
-MapViewApi::RequestRender(h1);
-MapViewApi::RequestRender(h2);
-MapViewApi::Destroy(h1);
-MapViewApi::Destroy(h2);
-```
-
-仅进程级全局状态（如 `VImage::SetImageProvider`）在多实例间共享，只需设置一次。
+| 共享项 | 规则 |
+|------|------|
+| 底图瓦片缓存、图片 Provider | 缓存在首个 `Create()` 时建立、最后一个 `Destroy()` 后释放；`VImage::SetImageProvider` 全局唯一 |
+| 地图主题 | `SetMapStyle` 对任一实例调用都影响其它实例；按全局设置统一管理，不要期望每实例不同主题 |
+| handle 计数器 | `Destroy` 不复位，销毁后重建拿不回 1、2；handle 一律用 `Create()` 返回值传递，禁止写常量 |
